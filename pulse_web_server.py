@@ -384,7 +384,7 @@ async def handle_analyze(request):
             
             # Free Float
             float_shares = info.get("floatShares")
-            shares_out = info.get("sharesOutstanding")
+            shares_out = info.get("impliedSharesOutstanding") or info.get("sharesOutstanding")
             if float_shares and shares_out:
                 free_float_data["float_shares"] = float_shares
                 free_float_data["shares_outstanding"] = shares_out

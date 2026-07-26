@@ -128,7 +128,7 @@ class YFinanceFetcher:
                 week_52_low=week_52_low,
                 week_52_high=week_52_high,
                 market_cap=info.get("marketCap"),
-                shares_outstanding=info.get("sharesOutstanding"),
+                shares_outstanding=info.get("impliedSharesOutstanding") or info.get("sharesOutstanding"),
                 history=history,
             )
 
