@@ -156,6 +156,29 @@ BENEFICIAL_OWNERS = {
     "WIFI": "Keluarga Surianto",
 }
 
+# Local JSON database to persist stock quadrant history
+DB_PATH = "database.json"
+
+def load_database():
+    if os.path.exists(DB_PATH):
+        try:
+            with open(DB_PATH, "r") as f:
+                return json.load(f)
+        except Exception as e:
+            log.error(f"Failed to read database.json: {e}")
+    return {}
+
+def save_database(data):
+    try:
+        with open(DB_PATH, "w") as f:
+            json.dump(data, f, indent=2)
+    except Exception as e:
+        log.error(f"Failed to write database.json: {e}")
+
+async def handle_quadrant(request):
+    db = load_database()
+    return json_response(list(db.values()))
+
 # Custom JSON Encoder to handle datetime and pydantic models
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj):
@@ -295,6 +318,20 @@ async def handle_analyze(request):
                     "text": f"{verdict_label} ({verdict_cat})"
                 }
             }
+            # Save coordinates to local database.json
+            try:
+                db = load_database()
+                db[ticker] = {
+                    "ticker": ticker,
+                    "name": stock.name or ticker,
+                    "valuation_score": v_score,
+                    "quality_score": q_score,
+                    "category": verdict_cat,
+                    "label": verdict_label
+                }
+                save_database(db)
+            except Exception as db_err:
+                log.error(f"Failed to update database with quadrant data: {db_err}")
         else:
             compiled_data["fundamental"] = {
                 "summary": [],
@@ -374,31 +411,31 @@ async def handle_analyze(request):
             log.error(f"Failed to fetch extra yfinance details for {ticker}: {ex_err}")
 
         # Get AI Analysis
-        ai_client = AIClient()
-        
-        # Format the same payload we send to AI client
-        ai_payload = {
-            "stock": {
-                "ticker": stock.ticker,
-                "name": stock.name,
-                "price": stock.current_price,
-                "change": stock.change,
-                "change_percent": stock.change_percent,
-                "volume": stock.volume,
-                "market_cap": stock.market_cap,
-            },
-            "technical": compiled_data["technical"],
-            "broker": compiled_data["broker"]
-        }
-        
-        # Add fundamental to payload if exists
-        if fundamental_data:
-            ai_payload["fundamental"] = compiled_data["fundamental"]
-            
         ai_analysis = None
         ai_recommendation = None
         
         try:
+            ai_client = AIClient()
+            
+            # Format the same payload we send to AI client
+            ai_payload = {
+                "stock": {
+                    "ticker": stock.ticker,
+                    "name": stock.name,
+                    "price": stock.current_price,
+                    "change": stock.change,
+                    "change_percent": stock.change_percent,
+                    "volume": stock.volume,
+                    "market_cap": stock.market_cap,
+                },
+                "technical": compiled_data["technical"],
+                "broker": compiled_data["broker"]
+            }
+            
+            # Add fundamental to payload if exists
+            if fundamental_data:
+                ai_payload["fundamental"] = compiled_data["fundamental"]
+                
             log.info(f"Requesting AI analysis for {ticker} using {ai_client.model}...")
             ai_analysis = await ai_client.analyze_stock(ticker, ai_payload)
             
@@ -427,6 +464,7 @@ Gagal melakukan analisis menggunakan model AI karena **API Quota Exceeded** (429
                 "key_reasons": ["AI Quota Exceeded. Silakan ganti model AI di kanan atas."]
             }
         
+        db = load_database()
         response_payload = {
             "ticker": ticker,
             "stock": stock,
@@ -437,7 +475,8 @@ Gagal melakukan analisis menggunakan model AI karena **API Quota Exceeded** (429
             "free_float": free_float_data,
             "calendar": calendar_data,
             "ai_analysis": ai_analysis,
-            "ai_recommendation": ai_recommendation
+            "ai_recommendation": ai_recommendation,
+            "quadrant_history": list(db.values())
         }
         
         return json_response(response_payload)
@@ -492,6 +531,7 @@ app.router.add_get("/index.html", handle_index)
 app.router.add_get("/api/models", handle_get_models)
 app.router.add_post("/api/models", handle_set_model)
 app.router.add_get("/api/analyze", handle_analyze)
+app.router.add_get("/api/quadrant", handle_quadrant)
 app.router.add_get("/api/stockbit/status", handle_stockbit_status)
 app.router.add_post("/api/stockbit/auth", handle_stockbit_auth)
 

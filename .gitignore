@@ -172,6 +172,7 @@ charts/
 *.key
 secrets.json
 auth_state.json
+database.json
 
 # Temporary files
 *.tmp

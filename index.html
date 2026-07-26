@@ -1019,10 +1019,33 @@
         let quadrantChartInstance = null;
         let searchedStocks = [];
 
-        // On document ready, load models list
+        // On document ready, load models list and quadrant history
         document.addEventListener("DOMContentLoaded", () => {
             fetchModels();
+            fetchQuadrantHistory();
         });
+
+        // Fetch quadrant history from database.json on startup
+        async function fetchQuadrantHistory() {
+            try {
+                const res = await fetch("/api/quadrant");
+                if (res.ok) {
+                    const history = await res.json();
+                    if (history && history.length > 0) {
+                        searchedStocks = history.map(item => ({
+                            ticker: item.ticker,
+                            x: item.valuation_score,
+                            y: item.quality_score,
+                            label: item.label || "Verdict",
+                            category: item.category || "General"
+                        }));
+                        renderQuadrantChart();
+                    }
+                }
+            } catch (err) {
+                console.error("Failed to load quadrant history:", err);
+            }
+        }
 
         // Fetch AI models list
         async function fetchModels() {
@@ -1214,23 +1237,16 @@
                 sigBadge.className = "score-signal status-badge " + catClass;
                 document.getElementById("valuation-title").textContent = v.category;
 
-                // Save in quadrant history
-                const stockIdx = searchedStocks.findIndex(s => s.ticker === stock.ticker);
-                if (stockIdx !== -1) {
-                    searchedStocks[stockIdx].x = valPercent;
-                    searchedStocks[stockIdx].y = qualPercent;
-                    searchedStocks[stockIdx].label = v.label;
-                    searchedStocks[stockIdx].category = v.category;
-                } else {
-                    searchedStocks.push({
-                        ticker: stock.ticker,
-                        x: valPercent,
-                        y: qualPercent,
-                        label: v.label,
-                        category: v.category
-                    });
+                // Update searchedStocks from database.json returned by backend
+                if (data.quadrant_history && data.quadrant_history.length > 0) {
+                    searchedStocks = data.quadrant_history.map(item => ({
+                        ticker: item.ticker,
+                        x: item.valuation_score,
+                        y: item.quality_score,
+                        label: item.label || "Verdict",
+                        category: item.category || "General"
+                    }));
                 }
-                
                 renderQuadrantChart();
             } else {
                 combinedCard.style.display = "none";
