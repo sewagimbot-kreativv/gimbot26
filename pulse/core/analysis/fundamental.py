@@ -28,12 +28,19 @@ class FundamentalAnalyzer:
         """
         return await self.fetcher.fetch_fundamentals(ticker)
 
-    def score_valuation(self, data: FundamentalData) -> dict[str, Any]:
+    def score_valuation(
+        self,
+        data: FundamentalData,
+        sector: str | None = None,
+        industry: str | None = None
+    ) -> dict[str, Any]:
         """
         Score stock valuation based on fundamental metrics.
         
         Args:
             data: FundamentalData object
+            sector: Optional stock sector
+            industry: Optional stock industry
             
         Returns:
             Valuation score and breakdown
@@ -41,49 +48,94 @@ class FundamentalAnalyzer:
         scores = []
         max_score = 0
 
+        # Check if financial service or bank
+        is_bank_or_financial = False
+        if sector and any(w in sector.lower() for w in ["financial services", "financials", "financial"]):
+            is_bank_or_financial = True
+        elif industry and "bank" in industry.lower():
+            is_bank_or_financial = True
+
         # P/E Ratio scoring
         if data.pe_ratio is not None:
-            max_score += 20
-            if data.pe_ratio < 0:
-                scores.append(0)  # Negative earnings
-            elif data.pe_ratio < 10:
-                scores.append(20)  # Very undervalued
-            elif data.pe_ratio < 15:
-                scores.append(15)  # Undervalued
-            elif data.pe_ratio < 25:
-                scores.append(10)  # Fair
-            elif data.pe_ratio < 40:
-                scores.append(5)   # Overvalued
+            if is_bank_or_financial:
+                # Max 5 points
+                max_score += 5
+                if data.pe_ratio < 0:
+                    scores.append(0)
+                elif data.pe_ratio < 10:
+                    scores.append(5)
+                elif data.pe_ratio < 15:
+                    scores.append(4)
+                elif data.pe_ratio < 25:
+                    scores.append(3)
+                elif data.pe_ratio < 40:
+                    scores.append(1)
+                else:
+                    scores.append(0)
             else:
-                scores.append(0)   # Very overvalued
+                # Max 30 points
+                max_score += 30
+                if data.pe_ratio < 0:
+                    scores.append(0)
+                elif data.pe_ratio < 10:
+                    scores.append(30)
+                elif data.pe_ratio < 15:
+                    scores.append(22)
+                elif data.pe_ratio < 25:
+                    scores.append(15)
+                elif data.pe_ratio < 40:
+                    scores.append(7)
+                else:
+                    scores.append(0)
+        else:
+            scores.append(0)
 
         # P/B Ratio scoring
         if data.pb_ratio is not None:
-            max_score += 15
-            if data.pb_ratio < 1:
-                scores.append(15)  # Trading below book value
-            elif data.pb_ratio < 2:
-                scores.append(12)
-            elif data.pb_ratio < 3:
-                scores.append(8)
-            elif data.pb_ratio < 5:
-                scores.append(4)
+            if is_bank_or_financial:
+                # Max 30 points
+                max_score += 30
+                if data.pb_ratio < 1:
+                    scores.append(30)
+                elif data.pb_ratio < 2:
+                    scores.append(24)
+                elif data.pb_ratio < 3:
+                    scores.append(16)
+                elif data.pb_ratio < 5:
+                    scores.append(8)
+                else:
+                    scores.append(0)
             else:
-                scores.append(0)
+                # Max 5 points
+                max_score += 5
+                if data.pb_ratio < 1:
+                    scores.append(5)
+                elif data.pb_ratio < 2:
+                    scores.append(4)
+                elif data.pb_ratio < 3:
+                    scores.append(3)
+                elif data.pb_ratio < 5:
+                    scores.append(1)
+                else:
+                    scores.append(0)
+        else:
+            scores.append(0)
 
         # ROE scoring
         if data.roe is not None:
             max_score += 20
             if data.roe > 20:
-                scores.append(20)  # Excellent
+                scores.append(20)
             elif data.roe > 15:
-                scores.append(15)  # Good
+                scores.append(15)
             elif data.roe > 10:
-                scores.append(10)  # Average
+                scores.append(10)
             elif data.roe > 5:
-                scores.append(5)   # Below average
+                scores.append(5)
             else:
-                scores.append(0)   # Poor
+                scores.append(0)
+        else:
+            scores.append(0)
 
         # ROA scoring
         if data.roa is not None:
@@ -96,12 +148,14 @@ class FundamentalAnalyzer:
                 scores.append(5)
             else:
                 scores.append(0)
+        else:
+            scores.append(0)
 
         # Debt/Equity scoring
         if data.debt_to_equity is not None:
             max_score += 15
             if data.debt_to_equity < 0.5:
-                scores.append(15)  # Very low debt
+                scores.append(15)
             elif data.debt_to_equity < 1:
                 scores.append(12)
             elif data.debt_to_equity < 2:
@@ -109,13 +163,15 @@ class FundamentalAnalyzer:
             elif data.debt_to_equity < 3:
                 scores.append(4)
             else:
-                scores.append(0)   # High debt
+                scores.append(0)
+        else:
+            scores.append(0)
 
         # Dividend Yield scoring
         if data.dividend_yield is not None:
             max_score += 15
             if data.dividend_yield > 5:
-                scores.append(15)  # High yield
+                scores.append(15)
             elif data.dividend_yield > 3:
                 scores.append(12)
             elif data.dividend_yield > 1:
@@ -124,6 +180,8 @@ class FundamentalAnalyzer:
                 scores.append(4)
             else:
                 scores.append(0)
+        else:
+            scores.append(0)
 
         total_score = sum(scores)
         normalized_score = (total_score / max_score * 100) if max_score > 0 else 0
@@ -132,12 +190,12 @@ class FundamentalAnalyzer:
             "score": round(normalized_score, 1),
             "max_score": 100,
             "breakdown": {
-                "pe_score": scores[0] if len(scores) > 0 else None,
-                "pb_score": scores[1] if len(scores) > 1 else None,
-                "roe_score": scores[2] if len(scores) > 2 else None,
-                "roa_score": scores[3] if len(scores) > 3 else None,
-                "debt_score": scores[4] if len(scores) > 4 else None,
-                "dividend_score": scores[5] if len(scores) > 5 else None,
+                "pe_score": scores[0],
+                "pb_score": scores[1],
+                "roe_score": scores[2],
+                "roa_score": scores[3],
+                "debt_score": scores[4],
+                "dividend_score": scores[5],
             }
         }
 
@@ -255,13 +313,12 @@ class FundamentalAnalyzer:
                 "status": "",
             })
 
-        # Financial Health
         if data.debt_to_equity is not None:
             status = "Low Risk" if data.debt_to_equity < 1 else "Moderate" if data.debt_to_equity < 2 else "High Risk"
             summary.append({
                 "category": "Financial Health",
                 "name": "Debt/Equity",
-                "value": f"{data.debt_to_equity:.2f}",
+                "value": f"{data.debt_to_equity:.2f} ({data.debt_to_equity * 100:.1f}%)",
                 "status": status,
             })
 

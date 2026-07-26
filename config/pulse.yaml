@@ -5,31 +5,24 @@ app_name: "Pulse CLI"
 version: "0.1.0"
 debug: false
 
-# AI Configuration (CLIProxyAPI)
+# AI Configuration (Official Google Gemini API)
 ai:
-  base_url: "http://localhost:8317/v1"
-  api_key: "opencode"
-  default_model: "gemini-3-flash-preview"
+  base_url: "https://generativelanguage.googleapis.com/v1beta/openai/"
+  api_key: ""
+  default_model: "gemini-2.0-flash"
   temperature: 0.7
   max_tokens: 4096
   timeout: 120
   
   available_models:
-    gemini-3-flash-preview: "Gemini 3 Flash Preview [Antigravity]"
-    gemini-2.5-flash: "Gemini 2.5 Flash [Antigravity]"
-    gemini-2.5-flash-lite: "Gemini 2.5 Flash Lite [Antigravity]"
-    gemini-claude-sonnet-4-5: "Claude Sonnet 4.5 [Antigravity]"
-    gemini-claude-sonnet-4-5-thinking: "Claude Sonnet 4.5 Thinking [Antigravity]"
-    gemini-claude-opus-4-5-thinking: "Claude Opus 4.5 Thinking [Antigravity]"
-    gpt-oss-120b-medium: "GPT OSS 120B Medium [Antigravity]"
+    gemini-2.0-flash: "Gemini 2.0 Flash (Fast)"
+    gemini-1.5-flash: "Gemini 1.5 Flash"
+    gemini-1.5-pro: "Gemini 1.5 Pro (Advanced)"
 
 # Stockbit Configuration
 stockbit:
   api_base_url: "https://exodus.stockbit.com"
   headless: true
-  # Credentials should be in .env file:
-  # STOCKBIT_USERNAME=your_username
-  # STOCKBIT_PASSWORD=your_password
 
 # Data Configuration
 data:
@@ -39,25 +32,20 @@ data:
 
 # Analysis Configuration
 analysis:
-  # RSI
   rsi_period: 14
   rsi_oversold: 30
   rsi_overbought: 70
   
-  # MACD
   macd_fast: 12
   macd_slow: 26
   macd_signal: 9
   
-  # Moving Averages
   sma_periods: [20, 50, 200]
   ema_periods: [9, 21, 55]
   
-  # Bollinger Bands
   bb_period: 20
   bb_std: 2.0
   
-  # Volume
   volume_sma_period: 20
   volume_spike_threshold: 2.0
 

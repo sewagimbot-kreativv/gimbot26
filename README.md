@@ -1,21 +1,84 @@
-# Pulse CLI
+# GimbotSaham & Pulse CLI
 
 <div align="center">
 
+![GimbotSaham Pro Web](https://img.shields.io/badge/GimbotSaham-Pro_Web-7c3aed?style=for-the-badge&logo=html5&logoColor=white)
 ![Pulse CLI](https://img.shields.io/badge/Pulse-CLI-58a6ff?style=for-the-badge&logo=python&logoColor=white)
 ![Python](https://img.shields.io/badge/Python-3.11+-3776ab?style=for-the-badge&logo=python&logoColor=white)
-![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Status](https://img.shields.io/badge/Status-Alpha-orange?style=for-the-badge)
+![Status](https://img.shields.io/badge/Status-Production_Ready-brightgreen?style=for-the-badge)
 
-**AI-Powered Indonesian Stock Market Analysis CLI**
+**GimbotSaham Web Dashboard & Stock Intelligence Engine**
 
-*Analisis saham Indonesia dengan kecerdasan buatan langsung dari terminal*
+*Analisis Saham Indonesia Interaktif dengan Dual Gauge, Visual Quadrant, Bandarmology, Beneficial Owner AHU Kemenkumham, dan Solvency Multi-Asset Fix.*
 
-[Features](#features) • [Installation](#installation) • [Usage](#usage) • [Commands](#commands) • [SAPTA Engine](#sapta-engine) • [Configuration](#configuration)
-
-[![GitHub](https://img.shields.io/badge/GitHub-sukirman1901%2FPulse--CLI-181717?style=flat-square&logo=github)](https://github.com/sukirman1901/Pulse-CLI)
+[![GitHub](https://img.shields.io/badge/GitHub-sewagimbot--kreativv%2Fgimbot26-181717?style=flat-square&logo=github)](https://github.com/sewagimbot-kreativv/gimbot26)
 
 </div>
+
+---
+
+## 🚀 Status Versi Saat Ini (Current Version Status)
+
+### 🌟 Fitur Unggulan GimbotSaham Pro Web Dashboard (`index.html`)
+1. **Desain 3-Kolom Presisi & Header Terpusat**:
+   - Ticker & nama emiten tampil di **tengah atas header** sejajar dengan brand `GimbotSaham PRO WEB`.
+   - Layout 3 kolom padat tanpa ruang kosong (*no blank space*).
+2. **Kartu Analisis Gabungan Valuation, Quality & Broker Flow**:
+   - **Double Circular Progress Gauges**: Visual lingkaran persentase *Valuation Score* (skor harga murah/mahal) dan *Quality Score* (skor kualitas fundamental) side-by-side.
+   - **Verdict Status Badge**: *Diamond (Undervalue)*, *Premium*, *Value Trap*, atau *Junk*.
+   - **Flow & Foreign Net**: Status Akumulasi/Distribusi Broker beserta angka transaksi bersih asing (*Foreign Net Buy/Sell*).
+3. **Peta Kuadran Saham (Stock Positioning Map)**:
+   - Chart scatter plot 2D (Sumbu X: Valuasi, Sumbu Y: Kualitas) yang **mengingat seluruh emiten** yang pernah dipanggil sepanjang sesi tanpa menimpa data terdahulu.
+4. **Pembobotan Sektor Dinamis (Bank & Financial Services)**:
+   - **Sektor Finansial & Bank**: Pembobotan rasio **P/B (Price-to-Book)** diperbesar hingga **30 poin** (maksimal), dan bobot P/E kecil (**5 poin**).
+   - **Sektor Non-Finansial**: Pembobotan rasio **P/E (Price-to-Earnings)** diperbesar hingga **30 poin** (maksimal), dan bobot P/B kecil (**5 poin**).
+5. **Koreksi Data Solvency (Debt/Equity & Book Value USD/IDR)**:
+   - **Debt to Equity Ratio**: Otomatis mengonversi data yfinance dari persen ke rasio murni + persen (contoh SMDR: **`0.66 (65.8%)`** dengan status **`Low Risk`**), presisi selaras dengan tabel Solvency Stockbit.
+   - **Kurs USD/IDR Live**: Mengambil acuan kurs live dari Yahoo Finance (`USDIDR=X`) untuk mengonversi nilai buku berdenominasi USD ke IDR sehingga P/B ratio tidak lagi anomali (SMDR P/B: **`0.58`** *Undervalued*).
+6. **Beneficial Owner (Pemilik Manfaat)**:
+   - Menampilkan data Ultimate Beneficial Owner (UBO) pada profil perusahaan (contoh: *SMDR: Shanti L. Poesposoetjipto, Ratna Djuwita Hatma & Chandraleika M. Mulia*, *BBCA: Keluarga Hartono*) lengkap dengan link navigasi langsung ke portal resmi **[AHU Kemenkumham (bo.ahu.go.id)](https://ahu.go.id/pencarian/profil-pemilik-manfaat)**.
+7. **Built-in DNS CONNECT Proxy**:
+   - Proxy tunnel otomatis berjalan di background backend (`pulse_web_server.py`) untuk mengatasi isu DNS Name Resolution pada macOS Sandbox secara transparan.
+
+---
+
+## ⏪ Panduan Rollback & Kontrol Versi (Git Rollback Guide)
+
+Jika di masa mendatang Anda ingin melakukan **rollback** (kembali ke versi commit sebelumnya), ikuti panduan berikut:
+
+### 1. Memeriksa Riwayat Commit (Check History)
+Lihat daftar commit beserta ID-nya:
+```bash
+git log --oneline -n 10
+```
+
+### 2. Opsi Rollback 1: Rollback Lunak (Soft Reset - Menjaga Kode Tetap Ada)
+Mengembalikan histori commit ke versi terdahulu, tetapi seluruh perubahan kodingan Anda **tetap tersimpan di working directory**:
+```bash
+git reset --soft <COMMIT_ID>
+```
+
+### 3. Opsi Rollback 2: Rollback Total (Hard Reset - Kembali Utuh ke Versi Lama)
+Mengembalikan repositori **100% utuh** seperti saat commit tertentu (perubahan yang belum di-commit akan dihapus):
+```bash
+# Langkah Opsional: Buat branch cadangan sebelum hard reset agar kode saat ini tidak hilang
+git branch backup-gimbot-versi-ini
+
+# Lakukan hard reset ke commit tujuan (misal commit ID: a698320)
+git reset --hard <COMMIT_ID>
+```
+
+### 4. Opsi Rollback 3: Rollback File Spesifik
+Jika Anda hanya ingin mengembalikan 1 file saja ke versi lama (misalnya mengembalikan `index.html` saja):
+```bash
+git checkout <COMMIT_ID> -- index.html
+```
+
+### 5. Memperbarui GitHub Setelah Rollback (Force Push)
+Jika Anda telah melakukan rollback di lokal dan ingin menyinkronkan repositori GitHub:
+```bash
+git push -f origin main
+```
 
 ---
 

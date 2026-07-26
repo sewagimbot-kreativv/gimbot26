@@ -156,10 +156,32 @@ class YFinanceFetcher:
             if not info:
                 return None
 
+            # Dynamic USD/IDR exchange rate
+            usdidr_rate = 16000.0
+            try:
+                fx_ticker = yf.Ticker("USDIDR=X")
+                fx_hist = fx_ticker.history(period="1d")
+                if not fx_hist.empty:
+                    val = float(fx_hist["Close"].iloc[-1])
+                    if val > 10000:
+                        usdidr_rate = val
+            except Exception:
+                pass
+
+            pb_ratio = info.get("priceToBook")
+            bvps = info.get("bookValue")
+            if pb_ratio is not None and pb_ratio > 100:
+                pb_ratio = pb_ratio / usdidr_rate
+                if bvps is not None:
+                    bvps = bvps * usdidr_rate
+
+            raw_de = info.get("debtToEquity")
+            debt_to_equity = (raw_de / 100.0) if raw_de is not None else None
+
             return FundamentalData(
                 ticker=clean_ticker,
                 pe_ratio=info.get("trailingPE") or info.get("forwardPE"),
-                pb_ratio=info.get("priceToBook"),
+                pb_ratio=pb_ratio,
                 ps_ratio=info.get("priceToSalesTrailing12Months"),
                 peg_ratio=info.get("pegRatio"),
                 ev_ebitda=info.get("enterpriseToEbitda"),
@@ -169,14 +191,14 @@ class YFinanceFetcher:
                 opm=info.get("operatingMargins", 0) * 100 if info.get("operatingMargins") else None,
                 gpm=info.get("grossMargins", 0) * 100 if info.get("grossMargins") else None,
                 eps=info.get("trailingEps"),
-                bvps=info.get("bookValue"),
+                bvps=bvps,
                 dps=info.get("dividendRate"),
                 revenue_growth=info.get("revenueGrowth", 0) * 100 if info.get("revenueGrowth") else None,
                 earnings_growth=info.get("earningsGrowth", 0) * 100 if info.get("earningsGrowth") else None,
-                debt_to_equity=info.get("debtToEquity"),
+                debt_to_equity=debt_to_equity,
                 current_ratio=info.get("currentRatio"),
                 quick_ratio=info.get("quickRatio"),
-                dividend_yield=info.get("dividendYield", 0) * 100 if info.get("dividendYield") else None,
+                dividend_yield=info.get("dividendYield") if info.get("dividendYield") is not None else None,
                 payout_ratio=info.get("payoutRatio", 0) * 100 if info.get("payoutRatio") else None,
                 market_cap=info.get("marketCap"),
                 enterprise_value=info.get("enterpriseValue"),

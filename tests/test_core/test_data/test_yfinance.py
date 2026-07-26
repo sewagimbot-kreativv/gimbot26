@@ -40,7 +40,7 @@ def mock_stock_data(mock_yf_ticker):
         'sharesOutstanding': 1000000000,
         'trailingPE': 20.5,
         'priceToBook': 4.2,
-        'dividendYield': 0.025
+        'dividendYield': 2.5
     }
     
     mock_ticker_instance = mock_yf_ticker.return_value
