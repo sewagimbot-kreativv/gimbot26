@@ -314,8 +314,8 @@ class StockbitClient:
 
         url = f"{self.base_url}/marketdetectors/{ticker}"
         params = {
-            "start_date": start_date,
-            "end_date": end_date,
+            "from": start_date,
+            "to": end_date,
             "transaction_type": "TRANSACTION_TYPE_NET",
             "market_board": "MARKET_BOARD_REGULER",
             "investor_type": "INVESTOR_TYPE_ALL",
@@ -490,8 +490,8 @@ class StockbitClient:
 
                 url = f"{self.base_url}/marketdetectors/{ticker}"
                 params = {
-                    "start_date": date_str,
-                    "end_date": date_str,
+                    "from": date_str,
+                    "to": date_str,
                     "transaction_type": "TRANSACTION_TYPE_NET",
                     "market_board": "MARKET_BOARD_REGULER",
                     "investor_type": "INVESTOR_TYPE_ALL",

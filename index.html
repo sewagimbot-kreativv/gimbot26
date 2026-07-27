@@ -705,6 +705,46 @@
             box-shadow: 0 0 12px rgba(255, 56, 96, 0.15);
             color: var(--color-error);
         }
+
+        /* Broker Period Tabs */
+        .broker-tab-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            color: var(--color-text-secondary);
+            padding: 4px 10px;
+            border-radius: 8px;
+            font-size: 11px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        .broker-tab-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: var(--color-text-primary);
+        }
+        .broker-tab-btn.active {
+            background: var(--accent-gradient);
+            border-color: transparent;
+            color: white;
+        }
+        .broker-spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(0, 242, 254, 0.1);
+            border-top-color: var(--accent-secondary);
+            border-radius: 50%;
+            animation: broker-spin 0.8s linear infinite;
+        }
+        @keyframes broker-spin {
+            to { transform: rotate(360deg); }
+        }
+        .fade-in {
+            animation: fadeIn 0.3s ease-in-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
@@ -957,7 +997,15 @@
 
                 <!-- Broker Flow / Bandarmology Card -->
                 <div id="broker-card" class="card">
-                    <h3 class="card-title">Broker Flow (Bandarmology)</h3>
+                    <div style="display:flex; justify-content:space-between; align-items:center; border-bottom: 1px solid var(--border-subtle); padding-bottom: 10px;">
+                        <h3 class="card-title" style="border-bottom:none; padding-bottom:0; margin:0;">Broker Flow (Bandarmology)</h3>
+                        <div class="broker-tabs" style="display:flex; gap:6px;">
+                            <button class="broker-tab-btn active" data-period="1" onclick="switchBrokerPeriod('1')">1D</button>
+                            <button class="broker-tab-btn" data-period="5" onclick="switchBrokerPeriod('5')">5D</button>
+                            <button class="broker-tab-btn" data-period="10" onclick="switchBrokerPeriod('10')">10D</button>
+                            <button class="broker-tab-btn" data-period="30" onclick="switchBrokerPeriod('30')">30D</button>
+                        </div>
+                    </div>
                     <div id="broker-info-section">
                         <!-- Loaded dynamically -->
                     </div>
@@ -1183,6 +1231,132 @@
             return num.toLocaleString('id-ID');
         }
 
+        // Global variables for Broker Flow tabs
+        window.globalBrokerData = null;
+
+        function renderBrokerFlow(b, dateRangeStr) {
+            const brokerSec = document.getElementById("broker-info-section");
+            if (!b) {
+                brokerSec.innerHTML = `
+                    <div style="text-align:center; padding:30px 15px; color:var(--color-text-muted);">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:10px; opacity:0.5;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+                        <p>Data Broker Flow (Stockbit) belum terhubung.</p>
+                        <button onclick="promptStockbitToken()" style="margin-top:12px; background:var(--accent-gradient); border:none; color:white; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:600; font-size:12px;">🔗 Hubungkan Token Stockbit</button>
+                    </div>
+                `;
+                return;
+            }
+
+            let flowBadgeClass = "status-neutral";
+            if (b.flow_category && b.flow_category.toUpperCase().includes("ACCUM")) {
+                flowBadgeClass = "status-positive";
+            } else if (b.flow_category && b.flow_category.toUpperCase().includes("DISTRI")) {
+                flowBadgeClass = "status-negative";
+            }
+
+            let buyersRows = "";
+            let sellersRows = "";
+
+            if (b.top_buyers && b.top_buyers.length > 0) {
+                b.top_buyers.slice(0, 5).forEach(buyer => {
+                    buyersRows += `
+                        <tr>
+                            <td><span style="color:#00f2fe;font-weight:600;">${buyer.broker}</span></td>
+                            <td>${formatNumber(buyer.value)}</td>
+                            <td>${buyer.percentage ? buyer.percentage.toFixed(1) + '%' : '-'}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                buyersRows = "<tr><td colspan='3' style='text-align:center;'>No buyer data</td></tr>";
+            }
+
+            if (b.top_sellers && b.top_sellers.length > 0) {
+                b.top_sellers.slice(0, 5).forEach(seller => {
+                    sellersRows += `
+                        <tr>
+                            <td><span style="color:#ff3860;font-weight:600;">${seller.broker}</span></td>
+                            <td>${formatNumber(seller.value)}</td>
+                            <td>${seller.percentage ? seller.percentage.toFixed(1) + '%' : '-'}</td>
+                        </tr>
+                    `;
+                });
+            } else {
+                sellersRows = "<tr><td colspan='3' style='text-align:center;'>No seller data</td></tr>";
+            }
+
+            const rangeHtml = dateRangeStr ? `<div style="font-size:11px; color:var(--color-text-muted); margin-top:2px; font-weight:normal;">📅 ${dateRangeStr}</div>` : '';
+
+            brokerSec.className = "fade-in";
+            brokerSec.innerHTML = `
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:var(--bg-card); border:1px solid var(--border-subtle); padding:10px 14px; border-radius:10px;">
+                    <div>
+                        <span style="font-size:11px; color:var(--color-text-secondary); text-transform:uppercase; font-weight:600;">Flow Category</span>
+                        <div style="font-family:var(--font-display); font-size:16px; font-weight:700; margin-top:2px;">${b.flow_category || 'N/A'}</div>
+                        ${rangeHtml}
+                    </div>
+                    <span class="status-badge ${flowBadgeClass}" style="padding:6px 12px; font-size:12px;">${b.flow_category || 'NEUTRAL'}</span>
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
+                    <div>
+                        <h4 style="font-size:12px; color:var(--color-text-secondary); margin-bottom:8px; display:flex; align-items:center; gap:5px;">
+                            <span style="width:8px; height:8px; background:var(--color-success); border-radius:50%;"></span> Top Buyers
+                        </h4>
+                        <table>
+                            <tbody>${buyersRows}</tbody>
+                        </table>
+                    </div>
+                    <div>
+                        <h4 style="font-size:12px; color:var(--color-text-secondary); margin-bottom:8px; display:flex; align-items:center; gap:5px;">
+                            <span style="width:8px; height:8px; background:var(--color-error); border-radius:50%;"></span> Top Sellers
+                        </h4>
+                        <table>
+                            <tbody>${sellersRows}</tbody>
+                        </table>
+                    </div>
+                </div>
+            `;
+        }
+
+        window.switchBrokerPeriod = function(period) {
+            // Toggle active tab classes
+            document.querySelectorAll('.broker-tab-btn').forEach(btn => {
+                if (btn.getAttribute('data-period') === period) {
+                    btn.classList.add('active');
+                } else {
+                    btn.classList.remove('active');
+                }
+            });
+
+            const brokerSec = document.getElementById("broker-info-section");
+            brokerSec.className = ""; // Reset class for animation re-triggering
+            
+            // Show loading spinner
+            brokerSec.innerHTML = `
+                <div style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:40px 15px; color:var(--color-text-muted); gap:12px;">
+                    <div class="broker-spinner"></div>
+                    <span style="font-size:12px; font-weight:500; color:var(--accent-secondary);">Memuat Broker Flow ${period}D...</span>
+                </div>
+            `;
+
+            setTimeout(() => {
+                const b = window.globalBrokerData;
+                if (!b) {
+                    renderBrokerFlow(null);
+                    return;
+                }
+
+                if (b.periods && b.periods[period]) {
+                    const periodData = b.periods[period];
+                    renderBrokerFlow(periodData, periodData.date_range);
+                } else {
+                    // Fallback
+                    renderBrokerFlow(b, b.date);
+                }
+            }, 300); // 300ms simulated dynamic calculation delay
+        };
+
         // Render Dashboard panels with returned JSON data
         function renderDashboard(data) {
             // Hide welcome screen, show dashboard
@@ -1368,87 +1542,8 @@
             }
 
             // 5. Render Broker Flow / Bandarmology
-            const brokerSec = document.getElementById("broker-info-section");
-            brokerSec.innerHTML = "";
-            if (data.broker) {
-                const b = data.broker;
-                
-                let flowBadgeClass = "status-neutral";
-                if (b.flow_category && b.flow_category.toUpperCase().includes("ACCUM")) {
-                    flowBadgeClass = "status-positive";
-                } else if (b.flow_category && b.flow_category.toUpperCase().includes("DISTRI")) {
-                    flowBadgeClass = "status-negative";
-                }
-
-                // Top Buyers and Sellers Table
-                let buyersRows = "";
-                let sellersRows = "";
-
-                if (b.top_buyers && b.top_buyers.length > 0) {
-                    b.top_buyers.slice(0, 5).forEach(buyer => {
-                        buyersRows += `
-                            <tr>
-                                <td><span style="color:#00f2fe;font-weight:600;">${buyer.broker}</span></td>
-                                <td>${formatNumber(buyer.value)}</td>
-                                <td>${buyer.percentage ? buyer.percentage.toFixed(1) + '%' : '-'}</td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    buyersRows = "<tr><td colspan='3' style='text-align:center;'>No buyer data</td></tr>";
-                }
-
-                if (b.top_sellers && b.top_sellers.length > 0) {
-                    b.top_sellers.slice(0, 5).forEach(seller => {
-                        sellersRows += `
-                            <tr>
-                                <td><span style="color:#ff3860;font-weight:600;">${seller.broker}</span></td>
-                                <td>${formatNumber(seller.value)}</td>
-                                <td>${seller.percentage ? seller.percentage.toFixed(1) + '%' : '-'}</td>
-                            </tr>
-                        `;
-                    });
-                } else {
-                    sellersRows = "<tr><td colspan='3' style='text-align:center;'>No seller data</td></tr>";
-                }
-
-                brokerSec.innerHTML = `
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; background:var(--bg-card); border:1px solid var(--border-subtle); padding:10px 14px; border-radius:10px;">
-                        <div>
-                            <span style="font-size:11px; color:var(--color-text-secondary); text-transform:uppercase; font-weight:600;">Flow Category</span>
-                            <div style="font-family:var(--font-display); font-size:16px; font-weight:700; margin-top:2px;">${b.flow_category || 'N/A'}</div>
-                        </div>
-                        <span class="status-badge ${flowBadgeClass}" style="padding:6px 12px; font-size:12px;">${b.flow_category || 'NEUTRAL'}</span>
-                    </div>
-
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:15px;">
-                        <div>
-                            <h4 style="font-size:12px; color:var(--color-text-secondary); margin-bottom:8px; display:flex; align-items:center; gap:5px;">
-                                <span style="width:8px; height:8px; background:var(--color-success); border-radius:50%;"></span> Top Buyers
-                            </h4>
-                            <table>
-                                <tbody>${buyersRows}</tbody>
-                            </table>
-                        </div>
-                        <div>
-                            <h4 style="font-size:12px; color:var(--color-text-secondary); margin-bottom:8px; display:flex; align-items:center; gap:5px;">
-                                <span style="width:8px; height:8px; background:var(--color-error); border-radius:50%;"></span> Top Sellers
-                            </h4>
-                            <table>
-                                <tbody>${sellersRows}</tbody>
-                            </table>
-                        </div>
-                    </div>
-                `;
-            } else {
-                brokerSec.innerHTML = `
-                    <div style="text-align:center; padding:30px 15px; color:var(--color-text-muted);">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-bottom:10px; opacity:0.5;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
-                        <p>Data Broker Flow (Stockbit) belum terhubung.</p>
-                        <button onclick="promptStockbitToken()" style="margin-top:12px; background:var(--accent-gradient); border:none; color:white; padding:8px 16px; border-radius:8px; cursor:pointer; font-weight:600; font-size:12px;">🔗 Hubungkan Token Stockbit</button>
-                    </div>
-                `;
-            }
+            window.globalBrokerData = data.broker;
+            switchBrokerPeriod('1');
 
             // 6. Render AI Analysis Markdown
             const markdownContainer = document.getElementById("ai-analysis-container");

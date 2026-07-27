@@ -39,13 +39,131 @@ class BrokerFlowAnalyzer:
         Returns:
             Analysis result dictionary
         """
-        # Fetch latest broker summary
-        summary = await self.client.fetch_broker_summary(ticker)
+        import asyncio
+        from datetime import datetime, timedelta
+        
+        def get_weekdays_ago(base_date: datetime, n_days: int) -> datetime:
+            current = base_date
+            days_found = 0
+            while days_found < n_days - 1:
+                current -= timedelta(days=1)
+                if current.weekday() < 5:
+                    days_found += 1
+            return current
+
+        # 1. Search backwards starting from today to find the latest trading date with data
+        today = datetime.now()
+        summary = None
+        latest_date = today
+        
+        # Try today
+        today_str = today.strftime("%Y-%m-%d")
+        summary = await self.client.fetch_broker_summary(ticker, start_date=today_str, end_date=today_str)
+        
+        # If no data for today, look back up to 10 calendar days
+        if not summary or (not summary.top_buyers and not summary.top_sellers):
+            log.info(f"No broker summary data for today ({today_str}) for {ticker}. Searching previous days...")
+            for i in range(1, 11):
+                check_date = today - timedelta(days=i)
+                # Skip weekends
+                if check_date.weekday() >= 5:
+                    continue
+                date_str = check_date.strftime("%Y-%m-%d")
+                summary = await self.client.fetch_broker_summary(ticker, start_date=date_str, end_date=date_str)
+                if summary and (summary.top_buyers or summary.top_sellers):
+                    latest_date = check_date
+                    log.info(f"Found recent broker data for {ticker} on date {date_str}")
+                    break
+            else:
+                log.warning(f"Could not find any recent broker data for {ticker} in the last 10 days.")
+                # Fallback to today's summary (which might be empty)
+                summary = await self.client.fetch_broker_summary(ticker, start_date=today_str, end_date=today_str)
+                latest_date = today
 
         if not summary:
             return None
 
-        return self._analyze_summary(summary)
+        # 2. Perform 1-day analysis using the found latest summary
+        analysis = self._analyze_summary(summary)
+        
+        # Add root-level keys for frontend compatibility
+        analysis["flow_category"] = summary.bandar.broker_accdist.value if (summary.bandar and summary.bandar.broker_accdist) else "NEUTRAL"
+        analysis["top_buyers"] = [
+            {
+                "broker": b.broker_code,
+                "value": b.buy_value,
+                "percentage": (b.buy_value / summary.total_buy_value * 100) if summary.total_buy_value > 0 else 0.0
+            }
+            for b in summary.top_buyers
+        ]
+        analysis["top_sellers"] = [
+            {
+                "broker": s.broker_code,
+                "value": s.sell_value,
+                "percentage": (s.sell_value / summary.total_sell_value * 100) if summary.total_sell_value > 0 else 0.0
+            }
+            for s in summary.top_sellers
+        ]
+
+        # Helper to fetch and parse a specific period summary
+        async def fetch_period_data(p_days: int) -> dict[str, Any]:
+            start_dt = get_weekdays_ago(latest_date, p_days)
+            start_str = start_dt.strftime("%Y-%m-%d")
+            end_str = latest_date.strftime("%Y-%m-%d")
+            
+            p_summary = await self.client.fetch_broker_summary(ticker, start_date=start_str, end_date=end_str)
+            if not p_summary:
+                return {
+                    "flow_category": "NEUTRAL",
+                    "top_buyers": [],
+                    "top_sellers": [],
+                    "date_range": f"{start_str} s/d {end_str}"
+                }
+            
+            return {
+                "flow_category": p_summary.bandar.broker_accdist.value if (p_summary.bandar and p_summary.bandar.broker_accdist) else "NEUTRAL",
+                "top_buyers": [
+                    {
+                        "broker": b.broker_code,
+                        "value": b.buy_value,
+                        "percentage": (b.buy_value / p_summary.total_buy_value * 100) if p_summary.total_buy_value > 0 else 0.0
+                    }
+                    for b in p_summary.top_buyers
+                ],
+                "top_sellers": [
+                    {
+                        "broker": s.broker_code,
+                        "value": s.sell_value,
+                        "percentage": (s.sell_value / p_summary.total_sell_value * 100) if p_summary.total_sell_value > 0 else 0.0
+                    }
+                    for s in p_summary.top_sellers
+                ],
+                "date_range": f"{start_str} s/d {end_str}"
+            }
+
+        # 3. Fetch periods: 5, 10, 30 days
+        periods = {
+            "1": {
+                "flow_category": analysis["flow_category"],
+                "top_buyers": analysis["top_buyers"],
+                "top_sellers": analysis["top_sellers"],
+                "date_range": f"{latest_date.strftime('%Y-%m-%d')}"
+            }
+        }
+        
+        # Parallel fetch for 5, 10, 30 days
+        data_5, data_10, data_30 = await asyncio.gather(
+            fetch_period_data(5),
+            fetch_period_data(10),
+            fetch_period_data(30)
+        )
+        
+        periods["5"] = data_5
+        periods["10"] = data_10
+        periods["30"] = data_30
+        
+        analysis["periods"] = periods
+        return analysis
 
     def _analyze_summary(self, summary: BrokerSummary) -> dict[str, Any]:
         """Analyze a broker summary."""
