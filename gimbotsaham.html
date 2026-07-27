@@ -745,6 +745,142 @@
             from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
         }
+
+        /* AMOLED Dark Theme Override */
+        :root {
+            --bg-base: #000000; /* Pure Black background for AMOLED screen */
+            --bg-surface: rgba(10, 10, 15, 0.95);
+            --bg-card: rgba(18, 18, 24, 0.8);
+            --border-subtle: rgba(255, 255, 255, 0.05);
+            --border-glow: rgba(0, 242, 254, 0.15);
+        }
+
+        body {
+            background-color: var(--bg-base);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(138, 43, 226, 0.08) 0%, transparent 40%),
+                radial-gradient(circle at 90% 80%, rgba(0, 242, 254, 0.05) 0%, transparent 40%);
+            background-attachment: fixed;
+            padding-bottom: env(safe-area-inset-bottom);
+        }
+
+        /* iOS Safe Area Layout Adjustments */
+        .app-container {
+            padding-top: max(15px, env(safe-area-inset-top));
+            padding-left: max(15px, env(safe-area-inset-left));
+            padding-right: max(15px, env(safe-area-inset-right));
+            padding-bottom: max(15px, env(safe-area-inset-bottom));
+        }
+
+        /* Mobile Bottom Nav Bar */
+        .mobile-nav-bar {
+            display: none;
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: calc(60px + env(safe-area-inset-bottom));
+            background: rgba(5, 5, 5, 0.85);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border-top: 1px solid var(--border-subtle);
+            justify-content: space-around;
+            align-items: center;
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 1000;
+            box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.6);
+        }
+
+        .mobile-nav-item {
+            background: none;
+            border: none;
+            color: var(--color-text-muted);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            width: 70px;
+            padding: 8px 0;
+            transition: all 0.2s ease;
+        }
+
+        .mobile-nav-item svg {
+            stroke: var(--color-text-muted);
+            transition: transform 0.2s ease, stroke 0.2s ease;
+        }
+
+        .mobile-nav-item.active {
+            color: var(--accent-secondary);
+        }
+
+        .mobile-nav-item.active svg {
+            stroke: var(--accent-secondary);
+            transform: translateY(-2px);
+        }
+
+        /* Responsive Mobile Layout (iOS & Mobile Screen Size) */
+        @media (max-width: 768px) {
+            body {
+                padding-bottom: calc(75px + env(safe-area-inset-bottom)) !important;
+            }
+
+            .mobile-nav-bar {
+                display: flex;
+            }
+
+            .dashboard-grid {
+                grid-template-columns: 1fr !important;
+                gap: 15px;
+            }
+
+            /* Hide columns by default on mobile, active shown by JS class */
+            .dashboard-grid .column {
+                display: none !important;
+            }
+
+            .dashboard-grid .column.mobile-active {
+                display: flex !important;
+            }
+            
+            /* Compact Header on Mobile */
+            header {
+                flex-direction: column;
+                gap: 12px;
+                padding: 12px 16px;
+                border-radius: 12px;
+            }
+            
+            .controls-section {
+                width: 100%;
+                justify-content: space-between;
+                gap: 10px;
+            }
+
+            .search-box {
+                flex: 1;
+            }
+
+            .search-input {
+                width: 100%;
+                font-size: 13px;
+                padding: 8px 12px;
+                padding-right: 40px;
+            }
+            
+            .logo-text {
+                font-size: 22px;
+            }
+        }
+
+        /* Always show all columns on desktop screen widths */
+        @media (min-width: 769px) {
+            .dashboard-grid .column {
+                display: flex !important;
+            }
+        }
     </style>
 </head>
 <body>
@@ -805,7 +941,7 @@
         <div id="dashboard-view" class="dashboard-grid" style="display: none;">
             
             <!-- Column 1: Stock Details, Valuation, Profile & Chart -->
-            <div class="column">
+            <div class="column" id="col-summary">
                 <!-- Stock Price Info Card -->
                 <div class="card">
                     <div style="margin-bottom: 15px;">
@@ -942,7 +1078,7 @@
             </div>
 
             <!-- Column 2: Stock Positioning Map & Technical Indicators -->
-            <div class="column">
+            <div class="column" id="col-analysis">
                 <!-- Stock Positioning Map -->
                 <div class="card" style="min-height: 420px;">
                     <h3 class="card-title">Stock Positioning Map (Overall Verdict)</h3>
@@ -975,7 +1111,7 @@
             </div>
 
             <!-- Column 3: Fundamentals & Broker Flow Details -->
-            <div class="column">
+            <div class="column" id="col-sentiment">
                 <!-- Fundamentals Table Card -->
                 <div id="fundamentals-card" class="card" style="display: none;">
                     <h3 class="card-title">Fundamental Metrics</h3>
@@ -1062,7 +1198,47 @@
         <div class="loading-text" id="loading-status">Mengambil Data Saham...</div>
     </div>
 
+    <!-- Mobile Navigation Bar -->
+    <div class="mobile-nav-bar">
+        <button class="mobile-nav-item active" onclick="switchMobileTab('summary')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+            <span>Summary</span>
+        </button>
+        <button class="mobile-nav-item" onclick="switchMobileTab('analysis')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span>Analysis</span>
+        </button>
+        <button class="mobile-nav-item" onclick="switchMobileTab('sentiment')">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            <span>Sentiment</span>
+        </button>
+    </div>
+
     <script>
+        window.switchMobileTab = function(tabName) {
+            document.querySelectorAll('.mobile-nav-item').forEach(item => {
+                item.classList.remove('active');
+            });
+            const activeBtn = document.querySelector(`.mobile-nav-item[onclick*="${tabName}"]`);
+            if (activeBtn) activeBtn.classList.add('active');
+
+            const cols = {
+                'summary': 'col-summary',
+                'analysis': 'col-analysis',
+                'sentiment': 'col-sentiment'
+            };
+
+            Object.keys(cols).forEach(k => {
+                const el = document.getElementById(cols[k]);
+                if (el) {
+                    if (k === tabName) {
+                        el.classList.add('mobile-active');
+                    } else {
+                        el.classList.remove('mobile-active');
+                    }
+                }
+            });
+        };
         let priceChartInstance = null;
         let quadrantChartInstance = null;
         let searchedStocks = [];
@@ -1362,6 +1538,7 @@
             // Hide welcome screen, show dashboard
             document.getElementById("welcome-view").style.display = "none";
             document.getElementById("dashboard-view").style.display = "grid";
+            switchMobileTab('summary');
 
             const stock = data.stock;
 
